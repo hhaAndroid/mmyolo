@@ -171,9 +171,9 @@ class YOLOv5Head(BaseDenseHead):
                  init_cfg: OptMultiConfig = None):
         super().__init__(init_cfg=init_cfg)
 
-        self.head_module = MODELS.build(head_module)
-        self.num_classes = self.head_module.num_classes
-        self.featmap_strides = self.head_module.featmap_strides
+        # self.head_module = MODELS.build(head_module)
+        self.num_classes = 80
+        self.featmap_strides = [8,16,32]
         self.num_levels = len(self.featmap_strides)
 
         self.train_cfg = train_cfg
