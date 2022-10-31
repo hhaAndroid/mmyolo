@@ -661,3 +661,13 @@ class YOLOv5RandomAffine(BaseTransform):
         translation_matrix = np.array([[1, 0., x], [0., 1, y], [0., 0., 1.]],
                                       dtype=np.float32)
         return translation_matrix
+
+
+@TRANSFORMS.register_module()
+class ToGray(BaseTransform):
+
+    def transform(self, results):
+        img = cv2.cvtColor(results['img'], cv2.COLOR_BGR2GRAY)
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        results['img'] = img
+        return results
