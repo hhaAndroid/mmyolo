@@ -86,5 +86,6 @@ val_dataloader = dict(
         metainfo=metainfo,
         pipeline=test_pipeline,
         batch_shapes_cfg=None))
+test_dataloader = val_dataloader
 
 load_from = 'https://download.openmmlab.com/mmyolo/v0/yolov5/yolov5_n-v61_syncbn_fast_8xb16-300e_coco/yolov5_n-v61_syncbn_fast_8xb16-300e_coco_20220919_090739-b804c1ad.pth'  # noqa
