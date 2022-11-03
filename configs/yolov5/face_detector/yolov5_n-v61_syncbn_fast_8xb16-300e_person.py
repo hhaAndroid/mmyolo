@@ -1,7 +1,7 @@
 _base_ = '../yolov5_n-v61_syncbn_fast_8xb16-300e_coco.py'
 
 metainfo = {'CLASSES': ('person', ), 'PALETTE': (220, 20, 60)}
-img_scale = (640, 320)
+img_scale = (320, 640)  # h w
 
 anchors = [[[11, 5], [17, 9], [25, 12]], [[35, 17], [46, 24], [64, 32]],
            [[86, 45], [134, 67], [218, 115]]]
@@ -10,7 +10,7 @@ model = dict(
     bbox_head=dict(
         head_module=dict(num_classes=1),
         prior_generator=dict(base_sizes=anchors),
-        loss_obj=dict(loss_weight=1.0 * ((img_scale[0] / 640)**2))))
+        loss_obj=dict(loss_weight=1.0 * ((img_scale[1] / 640)**2))))
 
 albu_train_transforms = [
     dict(type='Blur', p=0.01),
