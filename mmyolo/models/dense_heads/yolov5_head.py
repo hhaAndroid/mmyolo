@@ -3,6 +3,7 @@ import copy
 import math
 from typing import List, Optional, Sequence, Tuple, Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 from mmdet.models.dense_heads.base_dense_head import BaseDenseHead
@@ -92,7 +93,7 @@ class YOLOv5HeadModule(BaseModule):
         for mi, s in zip(self.convs_pred, self.featmap_strides):  # from
             b = mi.bias.data.view(3, -1)
             # obj (8 objects per 640 image)
-            b.data[:, 4] += math.log(8 / (640 / s)**2)
+            b.data[:, 4] += math.log(8 / (640 / s) ** 2)
             b.data[:, 5:] += math.log(0.6 / (self.num_classes - 0.999999))
 
             mi.bias.data = b.view(-1)
@@ -335,7 +336,7 @@ class YOLOv5Head(BaseDenseHead):
 
         mlvl_strides = [
             flatten_priors.new_full(
-                (featmap_size.numel() * self.num_base_priors, ), stride) for
+                (featmap_size.numel() * self.num_base_priors,), stride) for
             featmap_size, stride in zip(featmap_sizes, self.featmap_strides)
         ]
         flatten_stride = torch.cat(mlvl_strides)
@@ -498,7 +499,6 @@ class YOLOv5Head(BaseDenseHead):
             dict[str, Tensor]: A dictionary of losses.
         """
         if self.ignore_iof_thr != -1:
-
             # convert ignore gt
             batch_target_ignore_list = []
             for i, gt_instances_ignore in enumerate(batch_gt_instances_ignore):
@@ -555,7 +555,7 @@ class YOLOv5Head(BaseDenseHead):
 
             # 2. Shape match
             wh_ratio = batch_targets_scaled[...,
-                                            4:6] / priors_base_sizes_i[:, None]
+                       4:6] / priors_base_sizes_i[:, None]
             match_inds = torch.max(
                 wh_ratio, 1 / wh_ratio).max(2)[0] < self.prior_match_thr
             batch_targets_scaled = batch_targets_scaled[match_inds]
@@ -688,7 +688,7 @@ class YOLOv5Head(BaseDenseHead):
     def _decode_bbox_to_xywh(self, bbox_pred, priors_base_sizes) -> Tensor:
         bbox_pred = bbox_pred.sigmoid()
         pred_xy = bbox_pred[:, :2] * 2 - 0.5
-        pred_wh = (bbox_pred[:, 2:] * 2)**2 * priors_base_sizes
+        pred_wh = (bbox_pred[:, 2:] * 2) ** 2 * priors_base_sizes
         decoded_bbox_pred = torch.cat((pred_xy, pred_wh), dim=-1)
         return decoded_bbox_pred
 
@@ -724,6 +724,24 @@ class YOLOv5Head(BaseDenseHead):
             dict[str, Tensor]: A dictionary of losses.
         """
         # 1. Convert gt to norm format
+        from mmengine.visualization import Visualizer
+        from mmengine import MessageHub
+        import cv2
+
+        message_hub = MessageHub.get_current_instance()
+        det_visualizer = Visualizer.get_current_instance()
+        orig_img = message_hub.get_info('orig_img')
+        det_visualizer.set_image(orig_img)
+        det_visualizer.draw_bboxes(batch_gt_instances[0].bboxes)
+
+        det_visualizer.draw_bboxes(batch_gt_instances_ignore[:, 2:], edge_colors='b')
+
+        cv2.namedWindow('image_orig', 0)
+        cv2.imshow('image_orig', det_visualizer.get_image())
+        # cv2.waitKey(0)
+
+        orig_img = det_visualizer.get_image().copy()
+
         batch_targets_normed = self._convert_gt_to_norm_format(
             batch_gt_instances, batch_img_metas)
 
@@ -741,6 +759,8 @@ class YOLOv5Head(BaseDenseHead):
         loss_obj = torch.zeros(1, device=device)
         scaled_factor = torch.ones(7, device=device)
 
+        rawn_imgs = []
+
         for i in range(self.num_levels):
             batch_size, _, h, w = bbox_preds[i].shape
             target_obj = torch.zeros_like(objectnesses[i])
@@ -756,7 +776,7 @@ class YOLOv5Head(BaseDenseHead):
                 dim=1)
 
             batch_inds = batch_gt_instances_ignore[:,
-                                                   0][ignore_max_ignore_index]
+                         0][ignore_max_ignore_index]
             ignore_inds = (ignore_max_overlaps > self.ignore_iof_thr).nonzero(
                 as_tuple=True)[0]
             batch_inds = batch_inds[ignore_inds].long()
@@ -787,7 +807,7 @@ class YOLOv5Head(BaseDenseHead):
 
             # 2. Shape match
             wh_ratio = batch_targets_scaled[...,
-                                            4:6] / priors_base_sizes_i[:, None]
+                       4:6] / priors_base_sizes_i[:, None]
             match_inds = torch.max(
                 wh_ratio, 1 / wh_ratio).max(2)[0] < self.prior_match_thr
             batch_targets_scaled = batch_targets_scaled[match_inds]
@@ -837,6 +857,13 @@ class YOLOv5Head(BaseDenseHead):
 
             # 4. Calculate loss
             # bbox loss
+            mlvl_priors = self.mlvl_priors[i]
+            mlvl_priors = mlvl_priors.reshape(-1, 3, 4).reshape(h, w, 3, 4)
+            pos_priors = mlvl_priors[grid_y_inds, grid_x_inds, priors_inds]
+            det_visualizer.set_image(orig_img)
+            det_visualizer.draw_bboxes(pos_priors, edge_colors='r')
+            image_pos = det_visualizer.get_image()
+
             retained_bbox_pred = bbox_preds[i].reshape(
                 batch_size, self.num_base_priors, -1, h,
                 w)[img_inds, priors_inds, :, grid_y_inds, grid_x_inds]
@@ -846,6 +873,16 @@ class YOLOv5Head(BaseDenseHead):
 
             not_ignore_weights = not_ignore_flags[img_inds, priors_inds,
                                                   grid_y_inds, grid_x_inds]
+
+            det_visualizer.set_image(orig_img)
+            det_visualizer.draw_bboxes(pos_priors * ((~not_ignore_weights[:, None].bool()).int()), edge_colors='y')
+
+            image_pos_ignore = det_visualizer.get_image()
+            rawn_img = np.concatenate((image_pos, image_pos_ignore), axis=1)
+            # cv2.namedWindow(f'image_{i}', 0)
+            # cv2.imshow(f'image_{i}', rawn_img)
+            rawn_imgs.append(rawn_img)
+
             loss_box_i, iou = self.loss_bbox(
                 decoded_bbox_pred,
                 bboxes_targets,
@@ -881,6 +918,11 @@ class YOLOv5Head(BaseDenseHead):
                     avg_factor=max(not_ignore_weights.sum(), 1))
             else:
                 loss_cls += cls_scores[i].sum() * 0
+
+        rawn_imgs = np.concatenate(rawn_imgs, axis=0)
+        cv2.namedWindow(f'image_p', 0)
+        cv2.imshow(f'image_p', rawn_imgs)
+        cv2.waitKey(0)
 
         _, world_size = get_dist_info()
         return dict(

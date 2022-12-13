@@ -11,13 +11,13 @@ deepen_factor = 0.33
 widen_factor = 0.5
 max_epochs = 300
 save_epoch_intervals = 10
-train_batch_size_per_gpu = 16
-train_num_workers = 8
+train_batch_size_per_gpu = 1
+train_num_workers = 0
 val_batch_size_per_gpu = 1
 val_num_workers = 2
 
 # persistent_workers must be False if num_workers is 0.
-persistent_workers = True
+persistent_workers = False
 
 # Base learning rate for optim_wrapper
 base_lr = 0.01

@@ -214,6 +214,17 @@ class BaseBackbone(BaseModule, metaclass=ABCMeta):
                     m.eval()
 
     def forward(self, x: torch.Tensor) -> tuple:
+
+        from mmengine import MessageHub
+        import numpy as np
+        message_hub = MessageHub.get_current_instance()
+        orig_img = x[0].permute(1, 2, 0).cpu().numpy()* 255.0
+        # bgr->rgb
+        orig_img = orig_img[..., ::-1].astype(np.uint8)
+
+        # 暂时保存起来
+        message_hub.update_info('orig_img', orig_img)
+
         """Forward batch_inputs from the data_preprocessor."""
         outs = []
         for i, layer_name in enumerate(self.layers):
