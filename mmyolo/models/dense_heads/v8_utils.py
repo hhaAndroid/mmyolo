@@ -317,7 +317,7 @@ class BboxLoss(nn.Module):
         self.use_dfl = use_dfl
 
     def forward(self, pred_dist, pred_bboxes, anchor_points, target_bboxes,
-                target_scores, target_scores_sum, fg_mask):
+                target_scores, target_scores_sum, fg_mask, dist_mask_):
         # IoU loss
         weight = torch.masked_select(target_scores.sum(-1),
                                      fg_mask).unsqueeze(-1)
@@ -331,6 +331,9 @@ class BboxLoss(nn.Module):
         # DFL loss
         if self.use_dfl:
             target_ltrb = bbox2dist(anchor_points, target_bboxes, self.reg_max)
+            print('v8shape', )
+            print('v8', pred_dist.sum(), fg_mask.sum(),
+                  pred_dist[fg_mask].sum())
             loss_dfl = self._df_loss(
                 pred_dist[fg_mask].view(-1, self.reg_max + 1),
                 target_ltrb[fg_mask]) * weight
