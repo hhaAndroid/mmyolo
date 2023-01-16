@@ -298,9 +298,9 @@ class YOLOv8CocoDataset(CocoDataset):
             labels = np.concatenate((labels[:, None], bboxes), axis=1)
             segments = []
 
-            if labels.size:
-                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padw, padh)  # normalized xywh to pixel xyxy format
-                segments = [xyn2xy(x, w, h, padw, padh) for x in segments]
+            # if labels.size:
+            #     labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padw, padh)  # normalized xywh to pixel xyxy format
+            #     segments = [xyn2xy(x, w, h, padw, padh) for x in segments]
             labels4.append(labels)
             segments4.extend(segments)
 
