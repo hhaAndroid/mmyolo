@@ -4,6 +4,7 @@ from .utils import BatchShapePolicy, yolov5_collate
 from .yolov5_coco import YOLOv5CocoDataset
 from .yolov5_crowdhuman import YOLOv5CrowdHumanDataset
 from .yolov5_voc import YOLOv5VOCDataset
+from .yolov8_coco import YOLOv8CocoDataset
 
 __all__ = [
     'YOLOv5CocoDataset', 'YOLOv5VOCDataset', 'BatchShapePolicy',

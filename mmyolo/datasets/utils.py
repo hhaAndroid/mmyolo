@@ -9,6 +9,17 @@ from ..registry import TASK_UTILS
 
 
 @COLLATE_FUNCTIONS.register_module()
+def yolov8_collate_fn(batch):
+    # YOLOv5 original collate function
+    im, label = zip(*batch)  # transposed
+    for i, lb in enumerate(label):
+        lb[:, 0] = i  # add target image index for build_targets()
+    return {
+        'inputs': torch.stack(im, 0),
+        'data_samples': torch.cat(label, 0)
+    }
+
+@COLLATE_FUNCTIONS.register_module()
 def yolov5_collate(data_batch: Sequence,
                    use_ms_training: bool = False) -> dict:
     """Rewrite collate_fn to get faster training speed.

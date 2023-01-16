@@ -82,7 +82,7 @@ class YOLOv8HeadModule(BaseModule):
             a[-1].bias.data[:] = 1.0  # box
             # cls (.01 objects, 80 classes, 640 img)
             b[-1].bias.data[:self.num_classes] = math.log(
-                5 / self.num_classes / (640 / s)**2)
+                5 / self.num_classes / (640 / s) ** 2)
 
     def _init_layers(self):
         """initialize conv layers in YOLOv8 head."""
@@ -487,8 +487,8 @@ class YOLOv8Head(YOLOv5Head):
             pred_d2 = pred_d1.view(bs, -1, 4 * self.head_module.reg_max)
             pred_distri_list.append(pred_d2)
 
-        pred_scores = torch.cat(pred_scores_list, dim=1)
-        pred_distri = torch.cat(pred_distri_list, dim=1)
+        pred_scores = torch.cat(pred_scores_list, dim=1).contiguous()
+        pred_distri = torch.cat(pred_distri_list, dim=1).contiguous()
         assert pred_distri.shape[1] == 8400 and pred_scores.shape[1] == 8400
 
         dtype = pred_scores.dtype
@@ -514,7 +514,7 @@ class YOLOv8Head(YOLOv5Head):
             anchor_points * stride_tensor, gt_labels, gt_bboxes, mask_gt)
 
         target_bboxes /= stride_tensor
-        target_scores_sum = target_scores.sum()
+        target_scores_sum = target_scores.sum().clamp(min=1)
 
         # cls loss
         loss_cls = self.bce(
@@ -545,6 +545,8 @@ class YOLOv8Head(YOLOv5Head):
     def preprocess(self, batch_gt_instances, batch_size):
         # 只支持fast version
         assert isinstance(batch_gt_instances, Tensor)
+        if batch_gt_instances.shape[0] == 0:
+            return torch.zeros(batch_size, 0, 5, device='cuda')
         i = batch_gt_instances[:, 0]  # image index
         _, counts = i.unique(return_counts=True)
         out = torch.zeros(batch_size, counts.max(), 5, device='cuda')
@@ -642,8 +644,8 @@ class YOLOv8Head(YOLOv5Head):
         # Fast version
         loss_inputs = outs + (batch_data_samples['bboxes_labels'],
                               batch_data_samples['img_metas'])
-        losses = self.loss_by_feat(*loss_inputs)
-        # losses_v8 = self.loss_by_feat_v8(*loss_inputs)
+        # losses = self.loss_by_feat(*loss_inputs)
+        losses = self.loss_by_feat_v8(*loss_inputs)
         # print('=======================================')
         # print('mmyolo', losses)
         # print('v8', losses_v8)

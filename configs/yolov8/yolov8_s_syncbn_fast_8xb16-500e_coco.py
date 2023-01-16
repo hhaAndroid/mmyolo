@@ -2,7 +2,7 @@ _base_ = '../_base_/default_runtime.py'
 
 # dataset settings
 data_root = 'data/coco/'
-dataset_type = 'YOLOv5CocoDataset'
+dataset_type = 'YOLOv8CocoDataset'
 
 # parameters that often need to be modified
 num_classes = 80
@@ -15,6 +15,17 @@ train_batch_size_per_gpu = 16
 train_num_workers = 8
 val_batch_size_per_gpu = 1
 val_num_workers = 2
+
+use_ceph = True
+if use_ceph:
+    file_client_args = dict(
+        backend='petrel',
+        path_mapping=dict({
+            './data/': 's3://openmmlab/datasets/detection/',
+            'data/': 's3://openmmlab/datasets/detection/'
+        }))
+else:
+    file_client_args = dict(backend='disk')
 
 # persistent_workers must be False if num_workers is 0.
 persistent_workers = True
@@ -104,87 +115,21 @@ model = dict(
         nms=dict(type='nms', iou_threshold=0.7),
         max_per_img=300))
 
-albu_train_transform = [
-    dict(type='Blur', p=0.01),
-    dict(type='MedianBlur', p=0.01),
-    dict(type='ToGray', p=0.01),
-    dict(type='CLAHE', p=0.01)
-]
-
-pre_transform = [
-    dict(type='LoadImageFromFile', file_client_args=_base_.file_client_args),
-    dict(type='LoadAnnotations', with_bbox=True)
-]
-
-last_transform = [
-    dict(
-        type='mmdet.Albu',
-        transforms=albu_train_transform,
-        bbox_params=dict(
-            type='BboxParams',
-            format='pascal_voc',
-            label_fields=['gt_bboxes_labels', 'gt_ignore_flags']),
-        keymap={
-            'img': 'image',
-            'gt_bboxes': 'bboxes'
-        }),
-    dict(type='YOLOv5HSVRandomAug'),
-    dict(type='mmdet.RandomFlip', prob=0.5),
-    dict(
-        type='mmdet.PackDetInputs',
-        meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape', 'flip',
-                   'flip_direction'))
-]
-train_pipeline = [
-    *pre_transform,
-    dict(
-        type='Mosaic',
-        img_scale=img_scale,
-        pad_val=114.0,
-        pre_transform=pre_transform),
-    dict(
-        type='YOLOv5RandomAffine',
-        max_rotate_degree=0.0,
-        max_shear_degree=0.0,
-        scaling_ratio_range=(0.5, 1.5),
-        max_aspect_ratio=100,
-        # img_scale is (width, height)
-        border=(-img_scale[0] // 2, -img_scale[1] // 2),
-        border_val=(114, 114, 114)),
-    *last_transform
-]
-
-train_pipeline_stage2 = [
-    *pre_transform,
-    dict(type='YOLOv5KeepRatioResize', scale=img_scale),
-    dict(
-        type='LetterResize',
-        scale=img_scale,
-        allow_scale_up=True,
-        pad_val=dict(img=114.0)),
-    dict(
-        type='YOLOv5RandomAffine',
-        max_rotate_degree=0.0,
-        max_shear_degree=0.0,
-        scaling_ratio_range=(0.5, 1.5),
-        max_aspect_ratio=100,
-        border_val=(114, 114, 114)), *last_transform
-]
-
 train_dataloader = dict(
     batch_size=train_batch_size_per_gpu,
     num_workers=train_num_workers,
     persistent_workers=persistent_workers,
     pin_memory=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
-    collate_fn=dict(type='yolov5_collate'),
+    collate_fn=dict(type='yolov8_collate_fn'),
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
+        serialize_data=False,  # TODO
         ann_file='annotations/instances_train2017.json',
         data_prefix=dict(img='train2017/'),
         filter_cfg=dict(filter_empty_gt=False, min_size=32),
-        pipeline=train_pipeline))
+        file_client_args=file_client_args))
 
 test_pipeline = [
     dict(type='LoadImageFromFile', file_client_args=_base_.file_client_args),
@@ -220,7 +165,7 @@ val_dataloader = dict(
     drop_last=False,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
-        type=dataset_type,
+        type='YOLOv5CocoDataset',
         data_root=data_root,
         test_mode=True,
         data_prefix=dict(img='val2017/'),
@@ -262,11 +207,7 @@ custom_hooks = [
         momentum=0.0001,
         update_buffers=True,
         strict_load=False,
-        priority=49),
-    dict(
-        type='mmdet.PipelineSwitchHook',
-        switch_epoch=max_epochs - 10,
-        switch_pipeline=train_pipeline_stage2)
+        priority=49)
 ]
 
 val_evaluator = dict(
