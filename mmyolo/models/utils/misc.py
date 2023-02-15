@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
-from typing import Sequence, Union
+from typing import Sequence, Union, Optional, Dict
 
 import torch
 from torch import Tensor
@@ -84,3 +84,22 @@ def gt_instances_preprocess(batch_gt_instances: Union[Tensor, Sequence],
                                          device=batch_gt_instances.device)
 
         return batch_instance
+
+
+from mmdet.models.test_time_augs import DetTTAModel
+from mmyolo.registry import MODELS
+from mmengine.dataset import Compose
+
+
+@MODELS.register_module()
+class DetSliceModel(DetTTAModel):
+    def __init__(self, pipeline, slice_cfg=None, **kwargs):
+        super().__init__(**kwargs)
+        self.pipeline = Compose(pipeline)
+        self.slice_cfg = slice_cfg
+
+    def test_step(self, data):
+        pass
+
+
+

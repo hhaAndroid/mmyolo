@@ -11,6 +11,15 @@ tta_model = dict(
     type='mmdet.DetTTAModel',
     tta_cfg=dict(nms=dict(type='nms', iou_threshold=0.65), max_per_img=300))
 
+slice_model = dict(
+    type='DetSliceModel',
+    slice_cfg=dict(
+        batch_size=1,
+        patch_size=320,  # 640
+        patch_overlap_ratio=0.25,
+        nms=dict(type='nms', iou_threshold=0.25))
+)
+
 img_scales = [(640, 640), (320, 320), (960, 960)]
 
 #                                LoadImageFromFile

@@ -2,6 +2,7 @@
 import argparse
 import os
 import os.path as osp
+import warnings
 
 from mmdet.engine.hooks.utils import trigger_visualization_hook
 from mmengine.config import Config, ConfigDict, DictAction
@@ -29,12 +30,16 @@ def parse_args():
         '--json-prefix',
         type=str,
         help='the prefix of the output json file without perform evaluation, '
-        'which is useful when you want to format the result to a specific '
-        'format and submit it to the test server')
+             'which is useful when you want to format the result to a specific '
+             'format and submit it to the test server')
     parser.add_argument(
         '--tta',
         action='store_true',
         help='Whether to use test time augmentation')
+    parser.add_argument(
+        '--slice',
+        action='store_true',
+        help='Whether to use sliding window cropping for Large image evaluation')
     parser.add_argument(
         '--show', action='store_true', help='show prediction results')
     parser.add_argument(
@@ -44,8 +49,8 @@ def parse_args():
     parser.add_argument(
         '--show-dir',
         help='directory where painted images will be saved. '
-        'If specified, it will be automatically saved '
-        'to the work_dir/timestamp/show_dir')
+             'If specified, it will be automatically saved '
+             'to the work_dir/timestamp/show_dir')
     parser.add_argument(
         '--wait-time', type=float, default=2, help='the interval of show (s)')
     parser.add_argument(
@@ -53,11 +58,11 @@ def parse_args():
         nargs='+',
         action=DictAction,
         help='override some settings in the used config, the key-value pair '
-        'in xxx=yyy format will be merged into config file. If the value to '
-        'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
-        'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
-        'Note that the quotation marks are necessary and that no white space '
-        'is allowed.')
+             'in xxx=yyy format will be merged into config file. If the value to '
+             'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
+             'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
+             'Note that the quotation marks are necessary and that no white space '
+             'is allowed.')
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
@@ -129,6 +134,26 @@ def main():
         if 'batch_shapes_cfg' in test_data_cfg:
             test_data_cfg.batch_shapes_cfg = None
         test_data_cfg.pipeline = cfg.tta_pipeline
+
+    if args.slice:
+        assert 'slice_model' in cfg, 'Cannot find ``slice_model`` in config.' \
+                                     " Can't use sliding window cropping !"
+        if cfg.test_dataloader.batch_size > 1:
+            cfg.test_dataloader.batch_size = 1
+            warnings.warn('The slice mode does not support the batch calculation '
+                          'of large images, please set `cfg.slice_model.slice_cfg.batch_size` '
+                          'to support the batch calculation between patches. '
+                          '`cfg.test_dataloader.batch_size` is forced to be set to 1')
+
+        test_data_cfg = cfg.test_dataloader.dataset
+        while 'dataset' in test_data_cfg:
+            test_data_cfg = test_data_cfg['dataset']
+        # test_data_cfg only keeps LoadImageFromFile, and the rest are moved to
+        # slice_model to control by yourself.
+        cfg.slice_model['pipeline'] = test_data_cfg.pipeline[1:]
+        cfg.model = ConfigDict(**cfg.slice_model, module=cfg.model)
+
+        del test_data_cfg.pipeline[1:]
 
     # build the runner from config
     if 'runner_type' not in cfg:
