@@ -12,13 +12,14 @@ text_prompts = []
 for cls in text_cls:
     text_prompts.append(f'a photo of a {cls}')
 
-inputs = tokenizer(text_prompts, padding=True, return_tensors="pt")
+with torch.no_grad():
+    inputs = tokenizer(text_prompts, padding=True, return_tensors="pt")
 
-outputs = model(**inputs)
-text_embeds = outputs.text_embeds
-text_embeds = text_embeds / text_embeds.norm(p=2, dim=-1, keepdim=True)
-print(text_embeds.shape)  # torch.Size([2, 512]
-torch.save(text_embeds, 'text_embeds.pth')
+    outputs = model(**inputs)
+    text_embeds = outputs.text_embeds
+    text_embeds = text_embeds / text_embeds.norm(p=2, dim=-1, keepdim=True)
+    print(text_embeds.shape)  # torch.Size([2, 512]
+    torch.save(text_embeds, 'text_embeds.pth')
 
 # from PIL import Image
 # import requests
