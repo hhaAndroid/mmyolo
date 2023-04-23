@@ -1,17 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
-from argparse import ArgumentParser
+os.system('python -m mim install "mmcv>=2.0.0rc4"')
+os.system('python -m mim install mmengine')
+os.system('python -m mim install "mmdet>=3.0.0"')
+os.system('python -m mim install -e .')
 
+from argparse import ArgumentParser
 import gradio as gr
 from mmdet.apis import DetInferencer, inference_detector
 
 from mmyolo.utils import switch_to_deploy
 from mmyolo.utils.misc import get_file_list
 
-os.system('python -m mim install "mmcv>=2.0.0rc4"')
-os.system('python -m mim install mmengine')
-os.system('python -m mim install "mmdet>=3.0.0"')
-os.system('python -m mim install -e .')
 
 mmyolo_det_dict = {
     'RTMDet-S': 'rtmdet_s_syncbn_fast_8xb32-300e_coco',
