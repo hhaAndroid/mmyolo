@@ -3,6 +3,7 @@ import os
 os.system('python -m mim install "mmcv>=2.0.0rc4"')
 os.system('python -m mim install mmengine')
 os.system('python -m mim install "mmdet>=3.0.0"')
+os.system('pip install git+https://github.com/cocodataset/panopticapi.git')
 os.system('python -m mim install -e .')
 
 from argparse import ArgumentParser
