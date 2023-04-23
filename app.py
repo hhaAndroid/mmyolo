@@ -20,7 +20,7 @@ model_dict = {
     'YOLOv7-L': 'yolov7_l_syncbn_fast_8x16b-300e_coco',
     'YOLOv8-L': 'yolov8_l_mask-refine_syncbn_fast_8xb16-500e_coco',
     'YOLOX-L': 'yolox_l_fast_8xb8-300e_coco',
-    'PPYOLOE-L': 'ppyoloe_plus_L_fast_8xb8-80e_coco',
+    'PPYOLOE-M': 'ppyoloe_plus_m_fast_8xb8-80e_coco'
 }
 
 
