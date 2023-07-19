@@ -6,6 +6,7 @@ from .yolo_bricks import (BepC3StageBlock, CSPLayerWithTwoConv,
                           MaxPoolAndStrideConvBlock, PPYOLOEBasicBlock,
                           RepStageBlock, RepVGGBlock, SPPFBottleneck,
                           SPPFCSPBlock, TinyDownSampleBlock)
+from .hybrid_encoder import HybridEncoder
 
 __all__ = [
     'SPPFBottleneck', 'RepVGGBlock', 'RepStageBlock', 'ExpMomentumEMA',

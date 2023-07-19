@@ -6,6 +6,7 @@ from .yolov6_head import YOLOv6Head, YOLOv6HeadModule
 from .yolov7_head import YOLOv7Head, YOLOv7HeadModule, YOLOv7p6HeadModule
 from .yolov8_head import YOLOv8Head, YOLOv8HeadModule
 from .yolox_head import YOLOXHead, YOLOXHeadModule
+from .rtdetr_head import RTDETRHead
 
 __all__ = [
     'YOLOv5Head', 'YOLOv6Head', 'YOLOXHead', 'YOLOv5HeadModule',
